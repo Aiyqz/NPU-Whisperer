@@ -22,7 +22,7 @@
 
 - **macOS 10.15+** 及 **Python 3.8+**
 - **OpenAI SDK**：`pip install openai`
-- **SiliconFlow API Key**：从 [SiliconFlow 官网](https://siliconflow.cn/) 注册并获取
+- **SiliconFlow API Key**：从 [SiliconFlow 官网](https://cloud.siliconflow.cn/i/eAHPD2Mur) 注册并获取
 
 ### 2️⃣ 配置环境
 
