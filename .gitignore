@@ -1,0 +1,28 @@
+# 绝对禁止提交的敏感配置文件
+.env
+config.py
+
+# 自动生成的本地日志与日记（除非你想把幽灵骂你的话传到 GitHub 上）
+*.log
+Mac_Observation_Diary.md
+
+# Python 编译缓存
+__pycache__/
+*.pyc
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS 生成的文件
+.DS_Store
+Thumbs.db
+
+# 临时快照文件
+.snapshot_stats.json
+.snapshot_stats_test.json
+
+# PID 文件
+.daemon.pid
