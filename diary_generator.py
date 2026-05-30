@@ -114,6 +114,99 @@ def call_siliconflow_api(prompt):
                 pass
             time.sleep(sleep_seconds)
 
+def truncate_diary_file():
+    """
+    截断日记文件，只保留最新的 50 篇日记。
+    根据 ### [ 标题标记进行分割，同时保留全局 header。
+    """
+    if not os.path.exists(config.DIARY_PATH):
+        return
+    
+    try:
+        with open(config.DIARY_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        try:
+            with open(config.LOG_PATH, "a", encoding="utf-8") as log_file:
+                log_file.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 截断日记：读取失败 {e}\n")
+        except:
+            pass
+        return
+    
+    # 分离全局 header 和历史内容
+    if "# 📓 《OS Polygraph: Mac 观察日记》" in content:
+        parts = content.split("---", 1)
+        if len(parts) < 2:
+            return
+        header_part = parts[0] + "---\n"
+        history_part = parts[1].strip()
+    else:
+        header_part = ""
+        history_part = content.strip()
+    
+    # 按 ### [ 分割日记条目
+    # 第一个可能是空的（如果历史部分从换行开始），需要过滤
+    if history_part:
+        entries = history_part.split("### [")
+        entries = [e.strip() for e in entries if e.strip()]  # 过滤空项
+        
+        # 只保留最新的 50 篇
+        if len(entries) > 50:
+            entries = entries[:50]
+            try:
+                with open(config.LOG_PATH, "a", encoding="utf-8") as log_file:
+                    log_file.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 日记已超过 50 篇，已截断为 50 篇\n")
+            except:
+                pass
+        
+        # 重新拼接（第一个 ### [ 前缀需要添加回来）
+        if entries:
+            rejoined_history = "### [" + "\n### [".join(entries)
+        else:
+            rejoined_history = ""
+    else:
+        rejoined_history = ""
+    
+    # 写回文件
+    new_content = header_part + rejoined_history if rejoined_history else header_part
+    
+    try:
+        with open(config.DIARY_PATH, "w", encoding="utf-8") as f:
+            f.write(new_content)
+    except Exception as e:
+        try:
+            with open(config.LOG_PATH, "a", encoding="utf-8") as log_file:
+                log_file.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 截断日记：写入失败 {e}\n")
+        except:
+            pass
+
+def rotate_log_file():
+    """
+    检查 daemon.log 大小，超过 5MB 时保留最后 1000 行，防止日志爆满。
+    """
+    if not os.path.exists(config.LOG_PATH):
+        return
+    
+    try:
+        file_size = os.path.getsize(config.LOG_PATH)
+        # 5MB = 5242880 bytes
+        if file_size > 5242880:
+            with open(config.LOG_PATH, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            # 保留最后 1000 行
+            if len(lines) > 1000:
+                lines = lines[-1000:]
+                # 在轮转前记录一条日志
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                lines.append(f"[{timestamp}] === 日志文件已轮转，保留最后 1000 行 ===\n")
+            
+            with open(config.LOG_PATH, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+    except Exception:
+        # 日志轮转失败不影响主流程
+        pass
+
 def build_prompt(stats):
     """根据指标状态生成投喂给 Gemini 的 System Prompt 与用户 Context"""
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -230,6 +323,10 @@ def main():
         print(f"观察日记成功更新：{config.DIARY_PATH}")
     except Exception as e:
         print(f"写入日记文件失败: {e}")
+
+    # 【新增】清理与维护：截断日记、轮转日志
+    truncate_diary_file()  # 只保留最新 50 篇日记
+    rotate_log_file()      # 防止日志文件无限膨胀
 
     # 清理临时快照文件
     try:
